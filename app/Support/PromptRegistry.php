@@ -282,11 +282,12 @@ TPL,
                     ['name' => 'beats',      'description' => 'Number of body beats, e.g. "3-4".'],
                 ],
                 'template'    => <<<'TPL'
-You are an award-winning short-form video scriptwriter for medical / healthcare creators in India.
+You are an award-winning video scriptwriter for medical / healthcare creators in India.
 {{ brandBlock }}
-Write a {{ seconds }}-second {{ platform }} Reel script for a doctor.
+Write a {{ seconds }}-second {{ platform }} video script for a doctor.
 - Topic: "{{ topic }}"
 - Doctor's specialty: "{{ specialty }}"
+- For videos of 3 minutes or longer, treat each body beat as a chapter/segment that develops a distinct sub-point, so the full runtime is filled with substantive, well-paced content — never filler or repetition.
 
 QUALITY MANDATE:
 - Write in CLEAN STANDARD ENGLISH ONLY (no romanized Hindi like "kro", " rutein"). The doctor reads this on camera and may re-use the caption, so it must pass spell-check.

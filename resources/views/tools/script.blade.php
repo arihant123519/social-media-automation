@@ -59,11 +59,15 @@
             </div>
 
             <div class="mb-3">
-                <label class="script-label d-block mb-2">Duration</label>
-                <div class="dur-toggle d-flex gap-2">
-                    <span><input type="radio" name="duration" id="d30" value="30" checked><label for="d30">30 sec</label></span>
-                    <span><input type="radio" name="duration" id="d60" value="60"><label for="d60">60 sec</label></span>
+                <label class="script-label d-block mb-1">Duration</label>
+                <div class="input-group input-group-sm">
+                    <input id="duration_value" type="number" class="form-control" value="30" min="1" step="1" placeholder="e.g. 5">
+                    <select id="duration_unit" class="form-select" style="max-width:7rem">
+                        <option value="sec" selected>seconds</option>
+                        <option value="min">minutes</option>
+                    </select>
                 </div>
+                <div class="text-muted small mt-1">Type any length (up to 20 min). Longer videos are structured into chapters/segments.</div>
             </div>
 
             <div class="mb-3">
@@ -101,6 +105,13 @@
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const $ = s => document.querySelector(s);
 
+// Resolve the typed length + unit into whole seconds, clamped to a sane range.
+function durationSeconds(){
+    let v = parseFloat($('#duration_value').value) || 0;
+    if($('#duration_unit').value === 'min') v *= 60;
+    return Math.max(15, Math.min(1200, Math.round(v)));
+}
+function fmtDur(s){ s = parseInt(s)||0; if(s < 120) return s+'s'; const m = s/60; return (Number.isInteger(m)?m:m.toFixed(1))+' min'; }
 function esc(s){ return (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function toast(msg){ const t=document.createElement('div'); t.className='position-fixed bottom-0 end-0 m-3 px-3 py-2 rounded text-white shadow'; t.style.cssText+='z-index:1100;background:#198754;'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),1600); }
 function copy(text){ navigator.clipboard.writeText(text).then(()=>toast('Copied')); }
@@ -110,12 +121,20 @@ function publishToPost(draft){
     try { sessionStorage.setItem('aiPublishDraft', JSON.stringify(draft)); } catch(e){}
     window.open('{{ route('Post.index') }}?from=ai', '_blank');
 }
+// Map the chosen platform + duration to a content format the rest of the app understands.
+// YouTube clips of 3 min+ are long-form videos, not Shorts; Instagram stays Reels.
+function videoFormat(){
+    const secs = durationSeconds();
+    if($('#platform').value === 'YouTube') return secs >= 180 ? 'long_video' : 'short_video';
+    return 'reels';
+}
+
 function publishScript(){
     const d = window._scriptData || {};
     publishToPost({
         source:    'script',
         client_id: $('#client_id').value || null,
-        post_type: ($('#platform').value === 'YouTube' ? 'short_video' : 'reels'),
+        post_type: videoFormat(),
         keyword:   $('#topic').value.trim(),
         caption:   d.caption || buildPlain(d),
         hashtags:  d.hashtags || '',
@@ -135,7 +154,7 @@ $('#go').addEventListener('click', async () => {
             body: JSON.stringify({
                 client_id: $('#client_id').value || null,
                 topic, specialty,
-                duration: document.querySelector('input[name=duration]:checked').value,
+                duration: durationSeconds(),
                 platform: $('#platform').value,
             }),
         });
@@ -169,7 +188,7 @@ function render(d){
         <div class="d-flex justify-content-between align-items-start mb-3 gap-2 flex-wrap">
             <div>
                 <h5 class="fw-bold mb-1">${esc(d.title||'Untitled script')}</h5>
-                <span class="pill">${esc(d.duration_seconds||'')}s</span>
+                <span class="pill">${esc(fmtDur(d.duration_seconds))}</span>
                 <span class="pill">${esc(d.platform||'')}</span>
             </div>
             <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
@@ -229,7 +248,7 @@ function checkViral(d){
     try {
         sessionStorage.setItem('viralDraft', JSON.stringify({
             client_id: $('#client_id').value || null,
-            format:    ($('#platform').value === 'YouTube' ? 'short_video' : 'reels'),
+            format:    videoFormat(),
             topic:     $('#topic').value.trim(),
             hook:      d.hook?.spoken || '',
             caption:   d.caption || '',

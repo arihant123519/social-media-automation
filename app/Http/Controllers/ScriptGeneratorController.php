@@ -28,7 +28,7 @@ class ScriptGeneratorController extends Controller
             'client_id' => 'nullable|exists:clients,id',
             'topic'     => 'required|string|max:300',
             'specialty' => 'required|string|max:160',
-            'duration'  => 'required|in:30,60',
+            'duration'  => 'required|integer|min:15|max:1200',
             'platform'  => 'nullable|in:Instagram,YouTube',
         ]);
 
@@ -41,9 +41,13 @@ class ScriptGeneratorController extends Controller
         $platform   = $data['platform'] ?? 'Instagram';
         $seconds    = (int) $data['duration'];
 
-        // Rough beat budget so the script actually fits the runtime.
-        $beats = $seconds === 30 ? '3-4' : '5-7';
-        $words = $seconds === 30 ? '70-90' : '140-170';
+        // Rough budgets so the script actually fits the runtime. ~135 spoken words/min,
+        // and roughly one body beat per ~12s, capped so long videos read as chapters.
+        $wordTarget = (int) round($seconds / 60 * 135);
+        $words      = max(40, (int) round($wordTarget * 0.85)) . '-' . (int) round($wordTarget * 1.1);
+
+        $beatTarget = min(24, max(3, (int) round($seconds / 12)));
+        $beats      = max(3, $beatTarget - 1) . '-' . ($beatTarget + 2);
 
         $prompt = \App\Models\Prompt::render('script.generate', [
             'brandBlock' => $brandBlock,
